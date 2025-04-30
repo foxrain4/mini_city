@@ -8,13 +8,16 @@ body {
   min-height: 100vh;
   margin: 0;
 }
+
 .game-container {
   text-align: center;
 }
+
 h1 {
   font-size: 2rem;
   color: #0cf;
 }
+
 #board {
   display: grid;
   grid-template-columns: repeat(8, 40px);
@@ -22,6 +25,7 @@ h1 {
   justify-content: center;
   margin: 20px auto;
 }
+
 .cell {
   width: 40px;
   height: 40px;
@@ -34,8 +38,28 @@ h1 {
   justify-content: center;
   cursor: pointer;
   user-select: none;
+  transition: background 0.3s ease, transform 0.1s;
 }
+
+.cell:hover {
+  transform: scale(1.1);
+}
+
+/* Influence level styles */
 .level-1 { background: #2a2; }
 .level-2 { background: #4c4; }
 .level-3 { background: #6e6; }
 .level-4 { background: #8f8; }
+
+/* Blackout / no power */
+.cell.blackout {
+  background: #333 !important;
+  color: #f33;
+  font-weight: bold;
+}
+
+/* Optional: low-money highlight (not used yet) */
+.cell.too-expensive {
+  opacity: 0.5;
+  pointer-events: none;
+}
