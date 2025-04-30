@@ -1,139 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mini SimCity</title>
-  <style>
-    body { background: #111; color: #eee; font-family: monospace; text-align: center; }
-    #grid { display: grid; grid-template-columns: repeat(8, 40px); gap: 2px; margin: 20px auto; }
-    .cell { width: 40px; height: 40px; background: #222; border: 1px solid #444; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-    .R { background: green; }
-    .C { background: blue; }
-    .I { background: gray; }
-    .P { background: red; }
-    .W { background: cyan; }
-    #menu { margin-top: 10px; }
-    button { margin: 5px; padding: 5px 10px; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MiniCity</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>💰 $<span id="money">500</span></h2>
-  <div id="grid"></div>
-  <div id="menu">
-    <button onclick="select('R')">Residence ($50)</button>
-    <button onclick="select('C')">Commercial ($70)</button>
-    <button onclick="select('I')">Industry ($60)</button>
-    <button onclick="select('P')">Power ($100)</button>
-    <button onclick="select('W')">Water ($80)</button>
+  <div class="game-container">
+    <h1>🏙️ MiniCity</h1>
+    <p>Click to place: 🏠 → 🏬 → 🏭 → 🔌 → 💧 → (empty)</p>
+    <div id="board"></div>
   </div>
-
-  <script>
-    const grid = document.getElementById('grid');
-    const moneyEl = document.getElementById('money');
-    let selected = 'R';
-    let money = 500;
-    const width = 8;
-    const height = 8;
-    const cells = Array(width * height).fill(null);
-
-    const costs = { R: 50, C: 70, I: 60, P: 100, W: 80 };
-    const income = { R: 2, C: 3 };
-    const penalties = { P: -1, I: -1 };
-    const upkeep = { P: -2, I: -1 }; // Power Plant and Industry have an upkeep cost
-
-    function select(type) {
-      selected = type;
-    }
-
-    function updateMoney(val) {
-      money += val;
-      moneyEl.textContent = money;
-    }
-
-    function getNeighbors(i) {
-      const x = i % width;
-      const y = Math.floor(i / width);
-      const dirs = [
-        [0, -1], [1, 0], [0, 1], [-1, 0]
-      ];
-      return dirs
-        .map(([dx, dy]) => {
-          const nx = x + dx, ny = y + dy;
-          if (nx >= 0 && ny >= 0 && nx < width && ny < height) {
-            return ny * width + nx;
-          }
-        })
-        .filter(i => i !== undefined);
-    }
-
-    function buildGrid() {
-      grid.innerHTML = '';
-      for (let i = 0; i < width * height; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.addEventListener('click', () => place(i, cell));
-        grid.appendChild(cell);
-      }
-    }
-
-    function place(i, cell) {
-      if (cells[i] || money < costs[selected]) return;
-      cells[i] = selected;
-      cell.classList.add(selected);
-      cell.textContent = selected;
-      updateMoney(-costs[selected]);
-    }
-
-    function generateIncome() {
-      let incomeTotal = 0;
-      let expensesTotal = 0;
-      cells.forEach((type, i) => {
-        if (!type) return;
-        let influence = 0;
-        getNeighbors(i).forEach(j => {
-          if (cells[j] === 'W') influence++;
-          if (cells[j] === 'P') influence += penalties.P;
-          if (cells[j] === 'I') influence += penalties.I;
-        });
-
-        // Income generation logic
-        if ((type === 'R' || type === 'C') && influence > 0) {
-          incomeTotal += income[type] * influence;
-        }
-
-        // Upkeep logic for Power and Industry
-        if (type === 'P' || type === 'I') {
-          expensesTotal += upkeep[type];
-        }
-      });
-
-      // Apply income and expenses
-      updateMoney(incomeTotal - expensesTotal);
-    }
-
-    function checkUpgrades() {
-      cells.forEach((type, i) => {
-        if (!type) return;
-        let influence = 0;
-        getNeighbors(i).forEach(j => {
-          if (cells[j] === 'W') influence++;
-        });
-
-        if (influence >= 3) { // Threshold for upgrade
-          const cell = grid.children[i];
-          if (type === 'R') cell.textContent = 'R2'; // Residence upgrade
-          if (type === 'C') cell.textContent = 'C2'; // Commercial upgrade
-        }
-      });
-    }
-
-    setInterval(() => {
-      generateIncome();
-      checkUpgrades();
-    }, 6000);
-
-    buildGrid();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
