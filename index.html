@@ -1,128 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SimGrid</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini SimCity</title>
   <style>
-    body {
-      background: #111;
-      color: #eee;
-      font-family: monospace;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(8, 40px);
-      gap: 2px;
-      justify-content: center;
-      margin-top: 20px;
-    }
-    .cell {
-      width: 40px; height: 40px;
-      background: #333;
-      border: 1px solid #222;
-      cursor: pointer;
-      font-size: 0.8rem;
-    }
+    body { background: #111; color: #eee; font-family: monospace; text-align: center; }
+    #grid { display: grid; grid-template-columns: repeat(8, 40px); gap: 2px; margin: 20px auto; }
+    .cell { width: 40px; height: 40px; background: #222; border: 1px solid #444; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
     .R { background: green; }
     .C { background: blue; }
-    .I { background: orange; }
+    .I { background: gray; }
     .P { background: red; }
     .W { background: cyan; }
+    #menu { margin-top: 10px; }
+    button { margin: 5px; padding: 5px 10px; }
   </style>
 </head>
 <body>
-  <h1>SimGrid</h1>
-  <div>💰 Money: $<span id="money">1000</span></div>
-  <div>
-    <button onclick="setBuild('R')">Residence ($100)</button>
-    <button onclick="setBuild('C')">Commercial ($120)</button>
-    <button onclick="setBuild('I')">Industry ($80)</button>
-    <button onclick="setBuild('P')">Power Plant ($200)</button>
-    <button onclick="setBuild('W')">Water Pump ($150)</button>
-  </div>
+  <h2>💰 $<span id="money">500</span></h2>
   <div id="grid"></div>
+  <div id="menu">
+    <button onclick="select('R')">Residence ($50)</button>
+    <button onclick="select('C')">Commercial ($70)</button>
+    <button onclick="select('I')">Industry ($60)</button>
+    <button onclick="select('P')">Power ($100)</button>
+    <button onclick="select('W')">Water ($80)</button>
+  </div>
 
   <script>
     const grid = document.getElementById('grid');
-    const moneyDisplay = document.getElementById('money');
-    const width = 8, height = 8;
-    const cost = { R: 100, C: 120, I: 80, P: 200, W: 150 };
-    const income = { R: 10, C: 20 };
-    let cells = Array(width * height).fill(null);
-    let money = 1000;
-    let currentBuild = null;
+    const moneyEl = document.getElementById('money');
+    let selected = 'R';
+    let money = 500;
+    const width = 8;
+    const height = 8;
+    const cells = Array(width * height).fill(null);
 
-    function setBuild(type) {
-      currentBuild = type;
+    const costs = { R: 50, C: 70, I: 60, P: 100, W: 80 };
+    const income = { R: 2, C: 3 };
+    const penalty = { P: -1, I: -1 };
+
+    function select(type) {
+      selected = type;
     }
 
-    function updateMoneyDisplay() {
-      moneyDisplay.textContent = money;
+    function updateMoney(val) {
+      money += val;
+      moneyEl.textContent = money;
     }
 
     function getNeighbors(i) {
-      const x = i % width, y = Math.floor(i / width);
-      const deltas = [-1, 1, -width, width];
-      return deltas.map(d => i + d).filter(n => n >= 0 && n < width * height);
+      const x = i % width;
+      const y = Math.floor(i / width);
+      const dirs = [
+        [0, -1], [1, 0], [0, 1], [-1, 0]
+      ];
+      return dirs
+        .map(([dx, dy]) => {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && ny >= 0 && nx < width && ny < height) {
+            return ny * width + nx;
+          }
+        })
+        .filter(i => i !== undefined);
     }
 
-    function place(i) {
-      if (!currentBuild || cells[i] || money < cost[currentBuild]) return;
-      money -= cost[currentBuild];
-      cells[i] = { type: currentBuild, level: 1 };
-      render();
-      updateMoneyDisplay();
-    }
-
-    function render() {
+    function buildGrid() {
       grid.innerHTML = '';
-      for (let i = 0; i < cells.length; i++) {
+      for (let i = 0; i < width * height; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
-        if (cells[i]) cell.classList.add(cells[i].type);
-        if (cells[i]) cell.textContent = cells[i].type + (cells[i].level || '');
-        cell.onclick = () => place(i);
+        cell.addEventListener('click', () => place(i, cell));
         grid.appendChild(cell);
       }
     }
 
-    function checkInfluence() {
-      for (let i = 0; i < cells.length; i++) {
-        const b = cells[i];
-        if (!b || !['R', 'C'].includes(b.type)) continue;
-        const neighbors = getNeighbors(i);
+    function place(i, cell) {
+      if (cells[i] || money < costs[selected]) return;
+      cells[i] = selected;
+      cell.classList.add(selected);
+      cell.textContent = selected;
+      updateMoney(-costs[selected]);
+    }
+
+    function generateIncome() {
+      let incomeTotal = 0;
+      cells.forEach((type, i) => {
+        if (!type) return;
         let influence = 0;
-        for (let n of neighbors) {
-          const nb = cells[n];
-          if (!nb) continue;
-          if (['W', 'C', 'R'].includes(nb.type)) influence++;
-          if (['P', 'I'].includes(nb.type)) influence--;
+        getNeighbors(i).forEach(j => {
+          if (cells[j] === 'W') influence++;
+          if (cells[j] === 'P') influence += penalty.P;
+          if (cells[j] === 'I') influence += penalty.I;
+        });
+        if ((type === 'R' || type === 'C') && influence > 0) {
+          incomeTotal += income[type] * influence;
         }
-        b.level = Math.max(1, Math.min(4, influence));
-      }
-      render();
+      });
+      updateMoney(incomeTotal);
     }
 
-    function collectIncome() {
-      for (let i = 0; i < cells.length; i++) {
-        const b = cells[i];
-        if (!b || !income[b.type]) continue;
-        money += income[b.type] * b.level;
-      }
-      updateMoneyDisplay();
-    }
-
-    setInterval(() => {
-      checkInfluence();
-      collectIncome();
-    }, 6000);
-
-    render();
-    updateMoneyDisplay();
+    setInterval(generateIncome, 6000);
+    buildGrid();
   </script>
 </body>
 </html>
