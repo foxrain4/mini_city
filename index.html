@@ -39,7 +39,8 @@
 
     const costs = { R: 50, C: 70, I: 60, P: 100, W: 80 };
     const income = { R: 2, C: 3 };
-    const penalty = { P: -1, I: -1 };
+    const penalties = { P: -1, I: -1 };
+    const upkeep = { P: -2, I: -1 }; // Power Plant and Industry have an upkeep cost
 
     function select(type) {
       selected = type;
@@ -86,22 +87,52 @@
 
     function generateIncome() {
       let incomeTotal = 0;
+      let expensesTotal = 0;
       cells.forEach((type, i) => {
         if (!type) return;
         let influence = 0;
         getNeighbors(i).forEach(j => {
           if (cells[j] === 'W') influence++;
-          if (cells[j] === 'P') influence += penalty.P;
-          if (cells[j] === 'I') influence += penalty.I;
+          if (cells[j] === 'P') influence += penalties.P;
+          if (cells[j] === 'I') influence += penalties.I;
         });
+
+        // Income generation logic
         if ((type === 'R' || type === 'C') && influence > 0) {
           incomeTotal += income[type] * influence;
         }
+
+        // Upkeep logic for Power and Industry
+        if (type === 'P' || type === 'I') {
+          expensesTotal += upkeep[type];
+        }
       });
-      updateMoney(incomeTotal);
+
+      // Apply income and expenses
+      updateMoney(incomeTotal - expensesTotal);
     }
 
-    setInterval(generateIncome, 6000);
+    function checkUpgrades() {
+      cells.forEach((type, i) => {
+        if (!type) return;
+        let influence = 0;
+        getNeighbors(i).forEach(j => {
+          if (cells[j] === 'W') influence++;
+        });
+
+        if (influence >= 3) { // Threshold for upgrade
+          const cell = grid.children[i];
+          if (type === 'R') cell.textContent = 'R2'; // Residence upgrade
+          if (type === 'C') cell.textContent = 'C2'; // Commercial upgrade
+        }
+      });
+    }
+
+    setInterval(() => {
+      generateIncome();
+      checkUpgrades();
+    }, 6000);
+
     buildGrid();
   </script>
 </body>
