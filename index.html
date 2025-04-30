@@ -3,131 +3,126 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MiniCity</title>
+  <title>SimGrid</title>
   <style>
     body {
       background: #111;
       color: #eee;
-      font-family: 'Courier New', monospace;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-    }
-    .game-container {
+      font-family: monospace;
       text-align: center;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
-      font-size: 2rem;
-      color: #0cf;
-    }
-    #board {
+    #grid {
       display: grid;
       grid-template-columns: repeat(8, 40px);
-      grid-gap: 4px;
+      gap: 2px;
       justify-content: center;
-      margin: 20px auto;
+      margin-top: 20px;
     }
     .cell {
-      width: 40px;
-      height: 40px;
-      background: #222;
-      border: 1px solid #555;
-      color: white;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 40px; height: 40px;
+      background: #333;
+      border: 1px solid #222;
       cursor: pointer;
-      user-select: none;
+      font-size: 0.8rem;
     }
-    .level-1 { background: #2a2; }
-    .level-2 { background: #4c4; }
-    .level-3 { background: #6e6; }
-    .level-4 { background: #8f8; }
+    .R { background: green; }
+    .C { background: blue; }
+    .I { background: orange; }
+    .P { background: red; }
+    .W { background: cyan; }
   </style>
 </head>
 <body>
-  <div class="game-container">
-    <h1>🏙️ MiniCity</h1>
-    <p>Click to place: 🏠 → 🏬 → 🏭 → 🔌 → 💧 → (empty)</p>
-    <div id="board"></div>
+  <h1>SimGrid</h1>
+  <div>💰 Money: $<span id="money">1000</span></div>
+  <div>
+    <button onclick="setBuild('R')">Residence ($100)</button>
+    <button onclick="setBuild('C')">Commercial ($120)</button>
+    <button onclick="setBuild('I')">Industry ($80)</button>
+    <button onclick="setBuild('P')">Power Plant ($200)</button>
+    <button onclick="setBuild('W')">Water Pump ($150)</button>
   </div>
+  <div id="grid"></div>
+
   <script>
-    const board = document.getElementById('board');
-    const width = 8;
-    const height = 8;
-    const tileCycle = ['', 'res', 'com', 'ind', 'pow', 'wat'];
-    const symbols = {
-      res: '🏠',
-      com: '🏬',
-      ind: '🏭',
-      pow: '🔌',
-      wat: '💧'
-    };
-    const cells = [];
+    const grid = document.getElementById('grid');
+    const moneyDisplay = document.getElementById('money');
+    const width = 8, height = 8;
+    const cost = { R: 100, C: 120, I: 80, P: 200, W: 150 };
+    const income = { R: 10, C: 20 };
+    let cells = Array(width * height).fill(null);
+    let money = 1000;
+    let currentBuild = null;
 
-    function createBoard() {
-      for (let i = 0; i < width * height; i++) {
-        const cell = document.createElement('div');
-        cell.classList.add('cell');
-        cell.dataset.id = i;
-        cell.dataset.type = '';
-        board.appendChild(cell);
-        cell.addEventListener('click', () => handleClick(cell));
-        cells.push(cell);
-      }
+    function setBuild(type) {
+      currentBuild = type;
     }
 
-    function handleClick(cell) {
-      let currentType = cell.dataset.type;
-      let nextIndex = (tileCycle.indexOf(currentType) + 1) % tileCycle.length;
-      let newType = tileCycle[nextIndex];
-      cell.dataset.type = newType;
-      cell.textContent = symbols[newType] || '';
-      updateAllInfluence();
+    function updateMoneyDisplay() {
+      moneyDisplay.textContent = money;
     }
 
-    function updateAllInfluence() {
+    function getNeighbors(i) {
+      const x = i % width, y = Math.floor(i / width);
+      const deltas = [-1, 1, -width, width];
+      return deltas.map(d => i + d).filter(n => n >= 0 && n < width * height);
+    }
+
+    function place(i) {
+      if (!currentBuild || cells[i] || money < cost[currentBuild]) return;
+      money -= cost[currentBuild];
+      cells[i] = { type: currentBuild, level: 1 };
+      render();
+      updateMoneyDisplay();
+    }
+
+    function render() {
+      grid.innerHTML = '';
       for (let i = 0; i < cells.length; i++) {
-        let cell = cells[i];
-        if (cell.dataset.type === 'res') {
-          let influences = countInfluences(i);
-          cell.classList.remove('level-1', 'level-2', 'level-3', 'level-4');
-          if (influences >= 4) cell.classList.add('level-4');
-          else if (influences === 3) cell.classList.add('level-3');
-          else if (influences === 2) cell.classList.add('level-2');
-          else if (influences === 1) cell.classList.add('level-1');
-        } else {
-          cell.classList.remove('level-1', 'level-2', 'level-3', 'level-4');
-        }
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (cells[i]) cell.classList.add(cells[i].type);
+        if (cells[i]) cell.textContent = cells[i].type + (cells[i].level || '');
+        cell.onclick = () => place(i);
+        grid.appendChild(cell);
       }
     }
 
-    function countInfluences(id) {
-      const neighbors = getNeighbors(id);
-      let influenceTypes = ['pow', 'wat', 'com', 'ind'];
-      return neighbors
-        .map(i => cells[i].dataset.type)
-        .filter(type => influenceTypes.includes(type))
-        .length;
+    function checkInfluence() {
+      for (let i = 0; i < cells.length; i++) {
+        const b = cells[i];
+        if (!b || !['R', 'C'].includes(b.type)) continue;
+        const neighbors = getNeighbors(i);
+        let influence = 0;
+        for (let n of neighbors) {
+          const nb = cells[n];
+          if (!nb) continue;
+          if (['W', 'C', 'R'].includes(nb.type)) influence++;
+          if (['P', 'I'].includes(nb.type)) influence--;
+        }
+        b.level = Math.max(1, Math.min(4, influence));
+      }
+      render();
     }
 
-    function getNeighbors(id) {
-      const x = id % width;
-      const y = Math.floor(id / width);
-      const coords = [
-        [x-1, y-1], [x, y-1], [x+1, y-1],
-        [x-1, y],             [x+1, y],
-        [x-1, y+1], [x, y+1], [x+1, y+1]
-      ];
-      return coords
-        .filter(([cx, cy]) => cx >= 0 && cx < width && cy >= 0 && cy < height)
-        .map(([cx, cy]) => cy * width + cx);
+    function collectIncome() {
+      for (let i = 0; i < cells.length; i++) {
+        const b = cells[i];
+        if (!b || !income[b.type]) continue;
+        money += income[b.type] * b.level;
+      }
+      updateMoneyDisplay();
     }
 
-    createBoard();
+    setInterval(() => {
+      checkInfluence();
+      collectIncome();
+    }, 6000);
+
+    render();
+    updateMoneyDisplay();
   </script>
 </body>
 </html>
